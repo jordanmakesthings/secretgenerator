@@ -25,19 +25,80 @@ exports.handler = async function (event) {
 Your job is to transform raw story text into structured carousel slide copy that fits The Secret's brand voice: warm, inspiring, story-driven, and gently educational about the Law of Attraction.
 
 SLIDE STRUCTURE RULES:
-- Slide 1 (hook/cover): A bold teaser — short, punchy contrast or intriguing statement. Uses mixed bold headline + plain body. This is the cover that stops the scroll. Often formatted like "He went from [X] to [Y]" or "Meet [Name] from [Place]."
-- Middle slides (2–N-2): Narrative build. Short, punchy sentences. One idea per slide. Use bold for the "chapter heading" of each slide (e.g. "First he decided to start small." or "Then came his payoff."). Body text expands on that beat.
-- Second-to-last slide: The lesson/reflection. Summarises what the story teaches about the Law of Attraction.
-- Last slide: CTA — uses the product/trigger/benefit provided.
+- Slide 1 (hook/cover): A bold teaser. Often "He went from [X] to [Y]" or "Meet [Name] from [Place]."
+- Middle slides: Narrative build. One idea per slide. Bold chapter heading + body text.
+- Second-to-last slide: The lesson/reflection about the Law of Attraction.
+- Last slide: CTA using the product/trigger/benefit provided.
 
-IMPORTANT FORMATTING:
-- Each slide has an optional boldLine (the bold headline, sentence-case, ends with a period) and a bodyText (normal weight, the paragraph).
-- Keep slides concise. Most body text is 2–5 short sentences max.
-- The hook slide (slide 1) may have NO boldLine and just a large cover statement in the bodyText, OR a boldLine with minimal bodyText.
-- The CTA slide should say: "If you want to [BENEFIT]... Comment \"[TRIGGER]\" below and receive immediate access to the '[PRODUCT]'."
-- Number of slides: between 5 and 9, whatever serves the story best.
+IMPORTANT:
+- boldLine is optional (leave empty string if none). bodyText is required.
+- Keep body text to 2-5 short sentences.
+- CTA slide: "If you want to [BENEFIT]... Comment [TRIGGER] below and receive immediate access to the [PRODUCT]."
+- 5 to 9 slides total.
+- showArrow is true on all slides EXCEPT the last one.
 
-Respond ONLY with a valid JSON array of slide objects. No preamble, no markdown fences. Each object:
-{
-  "type": "hook|intro|story1|story2|story3|lesson|cta|extra",
-  "boldLine": "The
+Respond ONLY with a raw JSON array. No markdown, no code fences, no explanation. Example:
+[{"type":"hook","boldLine":"He went from broke to thriving.","bodyText":"This is his story.","showArrow":true}]`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [
+          {
+            role: "user",
+            content: `Story text:\n\n${storyText}\n\nCTA product: ${ctaProduct}\nCTA trigger word: ${ctaTrigger}\nCTA benefit: ${ctaBenefit}`,
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        statusCode: response.status,
+        body: JSON.stringify({ error: data.error?.message || "Anthropic API error" }),
+      };
+    }
+
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Unexpected response from AI: " + JSON.stringify(data) }),
+      };
+    }
+
+    const raw = data.content[0].text.trim();
+    const clean = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+    let slides;
+    try {
+      slides = JSON.parse(clean);
+    } catch (parseErr) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Could not parse AI response: " + raw.substring(0, 200) }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slides }),
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: err.message }),
+    };
+  }
+};
