@@ -34,7 +34,7 @@ IMPORTANT:
 - boldLine is optional (leave empty string if none). bodyText is required.
 - Keep body text to 2-5 short sentences.
 - CTA slide: "If you want to [BENEFIT]... Comment [TRIGGER] below and receive immediate access to the [PRODUCT]."
-- 5 to 9 slides total.
+- - 4 to 6 slides total, 7 maximum. Less is more — be concise.
 - showArrow is true on all slides EXCEPT the last one.
 
 Respond ONLY with a raw JSON array. No markdown, no code fences, no explanation. Example:
