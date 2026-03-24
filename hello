@@ -1,0 +1,75 @@
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
+
+  const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+  if (!ANTHROPIC_API_KEY) {
+    return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set in environment variables.' });
+  }
+
+  const { storyText, ctaProduct, ctaTrigger, ctaBenefit } = req.body;
+
+  const systemPrompt = `You are a social media content writer for The Secret (Rhonda Byrne's brand). You create Instagram carousel slides from real manifestation testimonials.
+
+Your job is to transform raw story text into structured carousel slide copy that fits The Secret's brand voice: warm, inspiring, story-driven, and gently educational about the Law of Attraction.
+
+SLIDE STRUCTURE RULES:
+- Slide 1 (hook/cover): A bold teaser. Often "He went from [X] to [Y]" or "Meet [Name] from [Place]."
+- Middle slides: Narrative build. One idea per slide. Bold chapter heading + body text.
+- Second-to-last slide: The lesson/reflection about the Law of Attraction.
+- Last slide: CTA using the product/trigger/benefit provided.
+
+IMPORTANT:
+- boldLine is optional (leave empty string if none). bodyText is required.
+- Keep body text to 2-5 short sentences.
+- CTA slide: "If you want to [BENEFIT]... Comment [TRIGGER] below and receive immediate access to the [PRODUCT]."
+- 4 to 6 slides total, 7 maximum. Less is more — be concise.
+- showArrow is true on all slides EXCEPT the last one.
+
+Respond ONLY with a raw JSON array. No markdown, no code fences, no explanation.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        system: systemPrompt,
+        messages: [{
+          role: 'user',
+          content: `Story text:\n\n${storyText}\n\nCTA product: ${ctaProduct}\nCTA trigger word: ${ctaTrigger}\nCTA benefit: ${ctaBenefit}`,
+        }],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: data.error?.message || 'Anthropic API error' });
+    }
+
+    if (!data.content || !data.content[0] || !data.content[0].text) {
+      return res.status(500).json({ error: 'Unexpected response from AI' });
+    }
+
+    const raw = data.content[0].text.trim();
+    const clean = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+    let slides;
+    try {
+      slides = JSON.parse(clean);
+    } catch (e) {
+      return res.status(500).json({ error: 'Could not parse AI response: ' + raw.substring(0, 200) });
+    }
+
+    return res.status(200).json({ slides });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
