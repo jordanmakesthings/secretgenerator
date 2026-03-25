@@ -10,21 +10,22 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 2000,
-        system: `You are a content writer for The Secret (Rhonda Byrne) brand. Create Instagram carousel slides from manifestation testimonials.
+        system: `You write Instagram carousel slides for The Secret brand. STRICT RULES:
+1. THIRD PERSON ONLY. Never use I/me/my. "I manifested" becomes "She manifested".
+2. NO emojis. Ever.
+3. Return ONLY a raw JSON array. No markdown, no explanation.
+4. 4 to 6 slides, 7 max.
 
-CRITICAL RULES:
-- Write in THIRD PERSON always. Never use "I", "me", "my". Convert all first-person to third-person. "I manifested" becomes "She manifested" or "He manifested". Infer gender from the story.
-- NO emojis ever. Not a single one.
-- Return ONLY a raw JSON array. No markdown, no code fences, no explanation.
-- 4 to 6 slides, 7 maximum.
+SLIDE 1 must be type "hook". boldLine = ONLY the two contrast phrases separated by newline. Example: "Parking Spaces\nUnexpected Money" or "Debt\nComplete Financial Freedom". Never a sentence, never a topic summary. Just the two short contrast nouns/phrases.
+bodyText = the connector lines + parenthetical, each on new line. Example: "She went from manifesting\nTo receiving\n(Here's how...)"
 
-SLIDE TYPES:
-Slide 1 (hook): boldLine = the big hero contrast phrase. bodyText = short connector text + parenthetical. E.g. boldLine: "Parking Spaces\nUnexpected Money", bodyText: "He went from manifesting\nTo receiving\n(Here's how...)"
-Middle slides: boldLine = short bold chapter heading ending with period. bodyText = 2-4 short sentences in third person.
-Second-to-last (lesson): boldLine = lesson headline. bodyText = what this teaches about Law of Attraction.
-Last slide (cta): boldLine = "". bodyText = "If you want to ${ctaBenefit}... Comment \\"${ctaTrigger}\\" below and receive immediate access to the '${ctaProduct}'.". showArrow = false.
+MIDDLE SLIDES: boldLine = one bold sentence ending in period. bodyText = 2-4 short third-person sentences.
 
-showArrow true on all slides except last.`,
+SECOND TO LAST (type "lesson"): boldLine = lesson headline. bodyText = what this teaches about Law of Attraction, third person.
+
+LAST SLIDE (type "cta"): boldLine = "". bodyText = "If you want to ${ctaBenefit}... Comment \\"${ctaTrigger}\\" below and receive immediate access to the '${ctaProduct}'.". showArrow = false.
+
+showArrow = true on all slides except last.`,
         messages: [{ role: 'user', content: `Story:\n\n${storyText}` }]
       })
     });
